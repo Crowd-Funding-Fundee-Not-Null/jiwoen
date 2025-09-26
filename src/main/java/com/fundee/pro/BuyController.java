@@ -1,0 +1,116 @@
+package com.fundee.pro;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
+
+//JSP연결하는곳이야 여기는
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.fundee.dao.PostsDAO;
+import com.fundee.dto.BuyListDTO;
+import com.fundee.mapper.BuyMapper;
+
+@Controller
+@RequestMapping("/")
+public class BuyController {
+	
+	@Autowired
+	private BuyMapper buyMapper;
+	
+	@Autowired
+	PostsDAO postsDAO;
+	//-----------------------------------------------------------------------09/23
+	
+	//펀딩하기 누른 후 buyForm 누르기 전에 로그인 여부 확인 하는 자리 
+	// 없으면 로그인 하던 안 하던 바로 buyForm으로 넘어감
+	@RequestMapping(value="/buyForm.do", method=RequestMethod.GET)
+	public String buyForm(@RequestParam int posts_num,
+		            HttpSession session,
+		            Model model) throws Exception  {
+	    // 로그인 여부 확인
+	    if(session.getAttribute("loginUser") == null) {
+	        // 로그인 안 되면 notLogined 컨트롤러로 보내면서 posts_num 전달
+	        return "redirect:/notLogined.do?posts_num=" + posts_num;
+	    }
+	    
+	    model.addAttribute("dto", postsDAO.getReadData(posts_num));
+	    
+	    // 로그인 되어 있으면 buyForm 열기
+	    return "buyForm";
+	     
+	    
+	    
+	}
+
+	//-------------------------------------------------------------------------09/23
+	
+	
+	/*
+	//구매 get
+	//구매누르면 결제창 나오는거 DB저장 된거 출력되어야 하는 창, 
+	@RequestMapping(value = "/buyForm", method = RequestMethod.GET)
+	public String buyForm(int posts_num, Model model, HttpServletRequest req) throws Exception {
+		
+		/* 임의로 넣는 테스트
+		buyListDTO.setId("test");
+		buyListDTO.setName("테스트");
+		buyListDTO.setTitle("국밥");
+		buyListDTO.setBuyPrice(15000);
+		buyListDTO.setBuyNumber(0);
+		
+		buyListDTO.setTotalPrice(buyListDTO.getBuyPrice()*
+				buyListDTO.getQty());
+		
+			
+		HttpSession session = req.getSession();
+		
+		if (session.getAttribute("loginId")==null) {
+			return "redirect:/posts_list.do";
+		}
+		
+		
+		model.addAttribute("dto",postsDAO.getReadData(posts_num));
+		return "buyForm";//buyForm.jsp(결제창)으로 이동
+	}
+	*/
+	
+	//구매 post
+	//결제하시겠습니까 나왔을때 결제 성공, 실패 메세지
+	@RequestMapping(value = "/buyForm", method = RequestMethod.POST)
+	public String buyData(@ModelAttribute BuyListDTO buyListDTO,
+			Model model) {
+		
+		try {
+			
+			buyMapper.insertData(buyListDTO);//인서트 데이터 작동 및 저장
+			
+			model.addAttribute("dto",buyListDTO); //전달해야할 내용
+			
+			return "redirect:/buyOk"; //buyOk.jsp(구매완료) 페이지로 이동
+			
+		} catch (Exception e) {
+			e.printStackTrace();
+			return "buyForm"; // 취소시 페이지 이동안함
+		}
+	}
+		
+	
+	//구매완료 get
+	//구매완료페이지(수량저장 및 방금구매한건 보여줌)
+	@RequestMapping(value = "/buyOk", method = RequestMethod.GET)
+	public String buyOk(@ModelAttribute("dto") BuyListDTO dto,
+							Model model) { //jsp에 넘겨야 하는것
+	
+		model.addAttribute("dto",dto);
+		return "buyOk";
+	}
+
+
+}
